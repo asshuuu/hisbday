@@ -1,0 +1,5 @@
+/* App-level overrides */
+#root {
+  min-height: 100vh;
+  background: #0B0B0B;
+}
