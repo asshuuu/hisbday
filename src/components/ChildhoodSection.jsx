@@ -193,7 +193,7 @@ function MemoryModal({ milestone, imgSrc, onClose }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px',
+            padding: 'clamp(10px, 3vw, 24px)',
             background: 'rgba(0,0,0,0.88)',
             backdropFilter: 'blur(24px)',
           }}
@@ -209,8 +209,8 @@ function MemoryModal({ milestone, imgSrc, onClose }) {
               borderRadius: '24px',
               maxWidth: '560px',
               width: '100%',
-              padding: '40px',
-              maxHeight: '90vh',
+              padding: 'clamp(18px, 5vw, 40px)',
+              maxHeight: '92vh',
               overflowY: 'auto',
               position: 'relative',
             }}
@@ -302,24 +302,36 @@ function MemoryModal({ milestone, imgSrc, onClose }) {
             </p>
 
             {/* Photo — real image if set, else placeholder */}
+            {/* Photo — real image or placeholder */}
             <div
               style={{
-                height: '220px',
                 borderRadius: '14px',
                 marginBottom: '24px',
                 overflow: 'hidden',
                 border: `1px solid ${milestone.color}25`,
+                background: '#0d0d0d',
+                maxHeight: '70vw',
+                minHeight: '160px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               {imgSrc ? (
                 <img
                   src={imgSrc}
                   alt={milestone.title}
-                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '70vw',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
                 />
               ) : (
                 <div style={{
-                  width:'100%', height:'100%',
+                  width:'100%', height:'160px',
                   display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px',
                   background: `linear-gradient(135deg, ${milestone.bg}, rgba(255,255,255,0.02))`,
                 }}>

@@ -241,7 +241,7 @@ function ChapterModal({ chapter, imgSrc, onClose }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px',
+            padding: 'clamp(10px, 3vw, 24px)',
             background: 'rgba(0,0,0,0.9)',
             backdropFilter: 'blur(28px)',
           }}
@@ -257,8 +257,8 @@ function ChapterModal({ chapter, imgSrc, onClose }) {
               borderRadius: '22px',
               maxWidth: '520px',
               width: '100%',
-              padding: '36px',
-              maxHeight: '88vh',
+              padding: 'clamp(18px, 5vw, 36px)',
+              maxHeight: '92vh',
               overflowY: 'auto',
               position: 'relative',
             }}
@@ -336,19 +336,34 @@ function ChapterModal({ chapter, imgSrc, onClose }) {
             {/* Photo — real or placeholder */}
             <div
               style={{
-                height: '180px',
                 borderRadius: '12px',
                 marginBottom: '20px',
                 overflow: 'hidden',
                 border: `1px solid ${chapter.color}22`,
+                background: '#0d0d0d',
+                // Let the image define its own height, capped at 70vw for mobile
+                maxHeight: '70vw',
+                minHeight: '160px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               {imgSrc ? (
-                <img src={imgSrc} alt={chapter.title}
-                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                <img
+                  src={imgSrc}
+                  alt={chapter.title}
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '70vw',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
+                />
               ) : (
                 <div style={{
-                  width:'100%', height:'100%',
+                  width:'100%', height:'160px',
                   display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px',
                   background: `linear-gradient(135deg, rgba(${chapter.color === '#E50914' ? '229,9,20' : '201,168,76'},0.1), rgba(255,255,255,0.02))`,
                 }}>
