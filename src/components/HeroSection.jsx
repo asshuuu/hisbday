@@ -227,17 +227,25 @@ export default function HeroSection({ onBegin }) {
         <motion.div
           initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
           transition={{ delay:1.1, duration:0.8 }}
-          style={{ display:'flex', flexWrap:'wrap', alignItems:'center', justifyContent:'center', gap:'16px' }}
+          style={{
+            display:'flex',
+            flexDirection:'column',
+            alignItems:'stretch',
+            gap:'12px',
+            width:'100%',
+            maxWidth:'320px',
+            margin:'0 auto',
+          }}
         >
           <motion.button className="btn-primary" onClick={onBegin}
-            whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }}
-            style={{ minWidth:'192px' }}
+            whileHover={{ scale:1.03 }} whileTap={{ scale:0.96 }}
+            style={{ width:'100%', justifyContent:'center' }}
           >
             <span>▶</span>Begin the Journey
           </motion.button>
           <motion.button className="btn-outline" onClick={scrollToExplore}
-            whileHover={{ scale:1.05 }} whileTap={{ scale:0.96 }}
-            style={{ minWidth:'148px' }}
+            whileHover={{ scale:1.03 }} whileTap={{ scale:0.96 }}
+            style={{ width:'100%', justifyContent:'center' }}
           >
             <span>↓</span>Explore
           </motion.button>

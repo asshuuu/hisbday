@@ -639,30 +639,43 @@ export default function ScratchSection() {
           <SectionHeader inView={titleInView} />
         </div>
 
-        {/* Step indicator */}
+        {/* Step indicator — wraps on mobile */}
         <motion.div
           initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }}
-          style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'8px', marginBottom:'40px' }}
+          style={{
+            display:'flex',
+            flexWrap:'wrap',
+            justifyContent:'center',
+            alignItems:'center',
+            gap:'6px',
+            marginBottom:'40px',
+            padding:'0 8px',
+          }}
         >
           {[
             { label:'Answer Questions', icon:'🧠', done: phase !== 'gate' },
             { label:'Unlock',           icon:'🔓', done: phase === 'scratch' },
             { label:'Scratch & Reveal', icon:'🎁', done: false },
           ].map((step, i, arr) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
               <div style={{
-                display:'flex', alignItems:'center', gap:'6px',
-                padding:'6px 14px', borderRadius:'20px',
+                display:'flex', alignItems:'center', gap:'5px',
+                padding:'5px 10px', borderRadius:'20px',
                 background: step.done ? 'rgba(229,9,20,0.15)' : 'rgba(255,255,255,0.04)',
                 border: `1px solid ${step.done ? 'rgba(229,9,20,0.3)' : 'rgba(255,255,255,0.08)'}`,
               }}>
-                <span style={{ fontSize:'0.85rem' }}>{step.icon}</span>
-                <span style={{ color: step.done ? '#E50914' : 'rgba(255,255,255,0.38)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:'0.8rem', lineHeight:1 }}>{step.icon}</span>
+                <span style={{
+                  color: step.done ? '#E50914' : 'rgba(255,255,255,0.38)',
+                  fontSize:'clamp(0.58rem, 2vw, 0.7rem)',
+                  fontFamily:'Inter, sans-serif',
+                  whiteSpace:'nowrap',
+                }}>
                   {step.label}
                 </span>
               </div>
               {i < arr.length - 1 && (
-                <span style={{ color:'rgba(255,255,255,0.2)', fontSize:'0.75rem' }}>→</span>
+                <span style={{ color:'rgba(255,255,255,0.2)', fontSize:'0.7rem' }}>→</span>
               )}
             </div>
           ))}

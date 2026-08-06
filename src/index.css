@@ -35,9 +35,13 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  width: 100%;
 }
 
 body {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
   background: var(--bg);
   color: var(--white);
   font-family: 'Inter', sans-serif;
