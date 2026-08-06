@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navLinks = [
-  { label: 'Home', href: '#home' },
-  { label: 'Childhood', href: '#childhood' },
-  { label: 'Our Story', href: '#our-story' },
-  { label: 'Gallery', href: '#gallery' },
+  { label: 'Home',           href: '#home' },
+  { label: 'Childhood',      href: '#childhood' },
+  { label: 'Our Story',      href: '#our-story' },
+  { label: 'Gallery',        href: '#gallery' },
+  { label: 'Surprises',      href: '#surprises' },
   { label: 'Birthday Letter', href: '#birthday' },
 ];
 
-export default function Navbar() {
+export default function Navbar({ onAdminOpen }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [active, setActive] = useState('home');

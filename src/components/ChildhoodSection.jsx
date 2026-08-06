@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import useStore from '../hooks/useStore';
 
 const milestones = [
   {
@@ -176,7 +177,7 @@ function TimelineRow({ milestone, index, onClick }) {
 }
 
 /* ── Memory modal ─────────────────────────────────────────── */
-function MemoryModal({ milestone, onClose }) {
+function MemoryModal({ milestone, imgSrc, onClose }) {
   return (
     <AnimatePresence>
       {milestone && (
@@ -300,31 +301,34 @@ function MemoryModal({ milestone, onClose }) {
               "{milestone.caption}"
             </p>
 
-            {/* Photo placeholder */}
+            {/* Photo — real image if set, else placeholder */}
             <div
               style={{
-                height: '200px',
+                height: '220px',
                 borderRadius: '14px',
                 marginBottom: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                background: `linear-gradient(135deg, ${milestone.bg}, rgba(255,255,255,0.02))`,
+                overflow: 'hidden',
                 border: `1px solid ${milestone.color}25`,
               }}
             >
-              <span style={{ fontSize: '2.5rem', opacity: 0.5 }}>{milestone.icon}</span>
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.3)',
-                  fontSize: '0.78rem',
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                Add your photo here
-              </p>
+              {imgSrc ? (
+                <img
+                  src={imgSrc}
+                  alt={milestone.title}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
+              ) : (
+                <div style={{
+                  width:'100%', height:'100%',
+                  display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px',
+                  background: `linear-gradient(135deg, ${milestone.bg}, rgba(255,255,255,0.02))`,
+                }}>
+                  <span style={{ fontSize:'2.5rem', opacity:0.5 }}>{milestone.icon}</span>
+                  <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.78rem', fontFamily:'Inter, sans-serif' }}>
+                    Add your photo in Admin Panel
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Memory text */}
@@ -445,6 +449,9 @@ function TransitionQuote() {
 /* ── Main export ──────────────────────────────────────────── */
 export default function ChildhoodSection() {
   const [selected, setSelected] = useState(null);
+  const store = useStore();
+
+  const getImg = (id) => store.timelineImages?.[`c${id}`] || '';
 
   return (
     <>
@@ -452,37 +459,28 @@ export default function ChildhoodSection() {
         id="childhood"
         className="section-wrap"
         style={{
-          background:
-            'radial-gradient(ellipse at 50% 20%, rgba(229,9,20,0.05) 0%, transparent 65%)',
+          background: 'radial-gradient(ellipse at 50% 20%, rgba(229,9,20,0.05) 0%, transparent 65%)',
           overflow: 'hidden',
           position: 'relative',
         }}
       >
-        {/* Container */}
         <div style={{ maxWidth: 'var(--container-max)', margin: '0 auto' }}>
           <SectionHeader />
-
-          {/* Timeline */}
           <div className="timeline-container">
-            {/* Spine */}
             <div className="timeline-spine" />
-
             {milestones.map((m, i) => (
-              <TimelineRow
-                key={m.id}
-                milestone={m}
-                index={i}
-                onClick={setSelected}
-              />
+              <TimelineRow key={m.id} milestone={m} index={i} onClick={setSelected} />
             ))}
           </div>
         </div>
-
-        {/* Transition quote — full-width, inside section */}
         <TransitionQuote />
       </section>
 
-      <MemoryModal milestone={selected} onClose={() => setSelected(null)} />
+      <MemoryModal
+        milestone={selected}
+        imgSrc={selected ? getImg(selected.id) : ''}
+        onClose={() => setSelected(null)}
+      />
     </>
   );
 }

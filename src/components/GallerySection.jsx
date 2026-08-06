@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { readStore } from '../hooks/useMediaStore';
+import useStore from '../hooks/useStore';
 
 const galleryItems = [
   { id: 1,  emoji: '❤️', label: 'Our First Memory',   span: 'tall',   color: 'rgba(229,9,20,0.20)' },
@@ -63,31 +65,41 @@ function GalleryCard({ item, index, onClick }) {
             padding: '16px',
           }}
         >
-          <div style={{ fontSize: '2.4rem', marginBottom: '10px', lineHeight: 1 }}>
-            {item.emoji}
-          </div>
-          <p
-            style={{
-              color: 'rgba(255,255,255,0.5)',
-              fontSize: '0.76rem',
-              fontFamily: 'Inter, sans-serif',
-              letterSpacing: '0.04em',
-              lineHeight: 1.4,
-            }}
-          >
-            {item.label}
-          </p>
-          <p
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{
-              color: 'rgba(255,255,255,0.38)',
-              fontSize: '0.66rem',
-              fontFamily: 'Inter, sans-serif',
-              marginTop: '6px',
-            }}
-          >
-            Add your photo
-          </p>
+          {item.src ? (
+            <img
+              src={item.src}
+              alt={item.label}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }}
+            />
+          ) : (
+            <>
+              <div style={{ fontSize: '2.4rem', marginBottom: '10px', lineHeight: 1 }}>
+                {item.emoji}
+              </div>
+              <p
+                style={{
+                  color: 'rgba(255,255,255,0.5)',
+                  fontSize: '0.76rem',
+                  fontFamily: 'Inter, sans-serif',
+                  letterSpacing: '0.04em',
+                  lineHeight: 1.4,
+                }}
+              >
+                {item.label}
+              </p>
+              <p
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  color: 'rgba(255,255,255,0.38)',
+                  fontSize: '0.66rem',
+                  fontFamily: 'Inter, sans-serif',
+                  marginTop: '6px',
+                }}
+              >
+                Add your photo
+              </p>
+            </>
+          )}
         </div>
 
         {/* Bottom hover overlay */}
@@ -185,24 +197,30 @@ function Lightbox({ item, onClose }) {
                 height: '260px',
                 borderRadius: '14px',
                 marginBottom: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                background: `linear-gradient(145deg, ${item.color}, rgba(18,18,18,0.7))`,
+                overflow: 'hidden',
                 border: '1px solid rgba(255,255,255,0.07)',
               }}
             >
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.38)',
-                  fontSize: '0.82rem',
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                📷 Add your favorite photo here
-              </p>
+              {item.src ? (
+                <img src={item.src} alt={item.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: `linear-gradient(145deg, ${item.color}, rgba(18,18,18,0.7))`,
+                  }}
+                >
+                  <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.82rem', fontFamily: 'Inter, sans-serif' }}>
+                    📷 Add your favorite photo here
+                  </p>
+                </div>
+              )}
             </div>
 
             <h3
@@ -275,6 +293,21 @@ function SectionHeader() {
 /* ── Main export ──────────────────────────────────────────── */
 export default function GallerySection() {
   const [lightboxItem, setLightboxItem] = useState(null);
+  const store = useStore();
+  const adminPhotos = store.galleryPhotos || [];
+
+  // Merge admin photos into the static list
+  const allItems = [
+    ...galleryItems,
+    ...adminPhotos.map((p, i) => ({
+      id: `admin_${p.id}`,
+      emoji: '📷',
+      label: p.label,
+      span: i % 3 === 0 ? 'tall' : 'normal',
+      color: 'rgba(229,9,20,0.15)',
+      src: p.src,
+    })),
+  ];
 
   return (
     <>
@@ -293,7 +326,7 @@ export default function GallerySection() {
 
           {/* Masonry grid */}
           <div className="masonry-grid">
-            {galleryItems.map((item, i) => (
+            {allItems.map((item, i) => (
               <GalleryCard key={item.id} item={item} index={i} onClick={setLightboxItem} />
             ))}
           </div>

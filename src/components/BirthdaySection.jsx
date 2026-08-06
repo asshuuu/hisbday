@@ -2,8 +2,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import confetti from 'canvas-confetti';
+import useStore from '../hooks/useStore';
 
-const finalMessage = [
+const DEFAULT_MESSAGE = [
   `Thank you for every smile, every laugh, every memory, and every beautiful chapter we've written together.`,
   `May your life always be filled with happiness, success, peace, and endless love.`,
   `This is only the beginning...\nOur best chapters are still waiting to be written.`,
@@ -147,6 +148,11 @@ export default function BirthdaySection({ onReplay }) {
   const [phase, setPhase] = useState(0);
   const [showHearts, setShowHearts] = useState(false);
   const [confettiFired, setConfettiFired] = useState(false);
+  const store = useStore();
+
+  const messageParas = store.birthdayLetter?.trim()
+    ? store.birthdayLetter.trim().split('\n\n').filter(Boolean)
+    : DEFAULT_MESSAGE;
 
   useEffect(() => {
     if (inView && phase === 0) setTimeout(() => setPhase(1), 700);
@@ -316,7 +322,7 @@ export default function BirthdaySection({ onReplay }) {
                     textAlign: 'center',
                   }}
                 >
-                  {finalMessage.map((para, i) => (
+                  {messageParas.map((para, i) => (
                     <motion.p
                       key={i}
                       initial={{ opacity: 0, y: 10 }}
@@ -328,7 +334,7 @@ export default function BirthdaySection({ onReplay }) {
                         fontSize: 'clamp(1rem, 2.8vw, 1.12rem)',
                         fontStyle: 'italic',
                         lineHeight: 1.95,
-                        marginBottom: i < finalMessage.length - 1 ? '20px' : 0,
+                        marginBottom: i < messageParas.length - 1 ? '20px' : 0,
                         whiteSpace: 'pre-line',
                       }}
                     >

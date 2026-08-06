@@ -49,6 +49,7 @@ body {
 body::-webkit-scrollbar        { width: 4px; }
 body::-webkit-scrollbar-track  { background: var(--bg); }
 body::-webkit-scrollbar-thumb  { background: var(--accent); border-radius: 2px; }
+/* scrollbar colours are controlled dynamically by useTheme — see injectScrollbarStyle() */
 
 ::selection { background: var(--accent); color: white; }
 

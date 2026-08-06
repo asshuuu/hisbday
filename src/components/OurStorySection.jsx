@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import useStore from '../hooks/useStore';
 
 const storyChapters = [
   {
@@ -224,7 +225,7 @@ function StoryRow({ chapter, index, onClick }) {
 }
 
 /* ── Chapter modal ────────────────────────────────────────── */
-function ChapterModal({ chapter, onClose }) {
+function ChapterModal({ chapter, imgSrc, onClose }) {
   return (
     <AnimatePresence>
       {chapter && (
@@ -332,33 +333,31 @@ function ChapterModal({ chapter, onClose }) {
               }}
             />
 
-            {/* Photo placeholder */}
+            {/* Photo — real or placeholder */}
             <div
               style={{
                 height: '180px',
                 borderRadius: '12px',
                 marginBottom: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                background: `linear-gradient(135deg, rgba(${
-                  chapter.color === '#E50914' ? '229,9,20' : '201,168,76'
-                },0.1), rgba(255,255,255,0.02))`,
+                overflow: 'hidden',
                 border: `1px solid ${chapter.color}22`,
               }}
             >
-              <span style={{ fontSize: '2rem', opacity: 0.5 }}>{chapter.icon}</span>
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.3)',
-                  fontSize: '0.75rem',
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                Add your photo here
-              </p>
+              {imgSrc ? (
+                <img src={imgSrc} alt={chapter.title}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+              ) : (
+                <div style={{
+                  width:'100%', height:'100%',
+                  display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px',
+                  background: `linear-gradient(135deg, rgba(${chapter.color === '#E50914' ? '229,9,20' : '201,168,76'},0.1), rgba(255,255,255,0.02))`,
+                }}>
+                  <span style={{ fontSize:'2rem', opacity:0.5 }}>{chapter.icon}</span>
+                  <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.75rem', fontFamily:'Inter, sans-serif' }}>
+                    Add your photo in Admin Panel
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Caption */}
@@ -444,6 +443,9 @@ function SectionHeader() {
 /* ── Main export ──────────────────────────────────────────── */
 export default function OurStorySection() {
   const [selected, setSelected] = useState(null);
+  const store = useStore();
+
+  const getImg = (id) => store.timelineImages?.[`s${id}`] || '';
 
   return (
     <>
@@ -451,21 +453,15 @@ export default function OurStorySection() {
         id="our-story"
         className="section-wrap"
         style={{
-          background:
-            'radial-gradient(ellipse at 80% 40%, rgba(229,9,20,0.06) 0%, transparent 60%)',
+          background: 'radial-gradient(ellipse at 80% 40%, rgba(229,9,20,0.06) 0%, transparent 60%)',
           overflow: 'hidden',
           position: 'relative',
         }}
       >
-        {/* Max-width container */}
         <div style={{ maxWidth: 'var(--container-max)', margin: '0 auto' }}>
           <SectionHeader />
-
-          {/* Timeline */}
           <div className="story-timeline">
-            {/* Spine */}
             <div className="story-spine" />
-
             {storyChapters.map((ch, i) => (
               <StoryRow key={ch.id} chapter={ch} index={i} onClick={setSelected} />
             ))}
@@ -473,7 +469,11 @@ export default function OurStorySection() {
         </div>
       </section>
 
-      <ChapterModal chapter={selected} onClose={() => setSelected(null)} />
+      <ChapterModal
+        chapter={selected}
+        imgSrc={selected ? getImg(selected.id) : ''}
+        onClose={() => setSelected(null)}
+      />
     </>
   );
 }
