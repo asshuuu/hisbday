@@ -128,7 +128,7 @@ function QuestionGate({ questions, onUnlocked }) {
         style={{
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid rgba(255,255,255,0.09)',
-          borderRadius: '18px', padding: '32px 28px',
+          borderRadius: '18px', padding: 'clamp(20px, 5vw, 32px)',
         }}
       >
         <p style={{
@@ -147,11 +147,10 @@ function QuestionGate({ questions, onUnlocked }) {
           {questions[current]?.question || '— Question not set in admin panel yet —'}
         </h3>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <motion.div
             animate={shake ? { x: [-8,8,-6,6,-4,4,0] } : { x: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ flex: 1 }}
           >
             <input
               ref={inputRef}
@@ -166,8 +165,8 @@ function QuestionGate({ questions, onUnlocked }) {
               style={{
                 width: '100%', background: 'rgba(255,255,255,0.06)',
                 border: `1px solid ${shake ? '#E50914' : 'rgba(255,255,255,0.12)'}`,
-                borderRadius: '10px', padding: '12px 16px',
-                color: '#fff', fontSize: '0.95rem',
+                borderRadius: '10px', padding: '14px 16px',
+                color: '#fff', fontSize: '1rem',
                 fontFamily: 'Inter, sans-serif', outline: 'none',
               }}
               onFocus={e => (e.target.style.borderColor = '#C9A84C')}
@@ -176,9 +175,9 @@ function QuestionGate({ questions, onUnlocked }) {
           </motion.div>
           <button type="submit" style={{
             background: '#E50914', border: 'none', borderRadius: '10px',
-            padding: '0 22px', color: '#fff', fontSize: '0.85rem',
+            padding: '14px', color: '#fff', fontSize: '0.9rem', width: '100%',
             fontFamily: 'Inter, sans-serif', fontWeight: 600,
-            cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+            cursor: 'pointer', letterSpacing: '0.05em',
           }}>
             {current < 3 ? 'Next →' : 'Unlock ✨'}
           </button>
@@ -626,12 +625,14 @@ export default function ScratchSection() {
     }}>
       {/* Heart burst — renders fixed over whole page */}
       <AnimatePresence>{showBurst && <HeartBurst key="burst" />}</AnimatePresence>
-      {/* Decorative orb */}
+      {/* Decorative orb — clipped so it never causes horizontal scroll */}
       <div style={{
-        position:'absolute', top:'10%', right:'-10%',
-        width:'500px', height:'500px', borderRadius:'50%',
+        position:'absolute', top:'10%', right:'0',
+        width:'40vw', maxWidth:'400px', height:'40vw', maxHeight:'400px',
+        borderRadius:'50%',
         background:'radial-gradient(circle,rgba(201,168,76,0.05) 0%,transparent 70%)',
         filter:'blur(60px)', pointerEvents:'none',
+        transform: 'translateX(30%)',
       }} />
 
       <div style={{ maxWidth:'var(--container-max)', margin:'0 auto', position:'relative', zIndex:1 }}>

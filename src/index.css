@@ -21,13 +21,11 @@
   --glass-border: rgba(255,255,255,0.10);
 
   /* Spacing scale */
-  --section-py:      120px;   /* desktop section top/bottom padding */
-  --section-py-sm:    72px;   /* mobile */
-  --section-px:       24px;
+  --section-py:      120px;
+  --section-py-sm:    64px;
+  --section-px:       clamp(16px, 4vw, 24px);
   --container-max:  1100px;
   --container-narrow: 760px;
-
-  /* Navbar height — used to push first section down */
   --nav-h: 70px;
 }
 
@@ -172,19 +170,21 @@ body::-webkit-scrollbar-thumb  { background: var(--accent); border-radius: 2px; 
   background: var(--accent);
   color: #fff;
   border: none;
-  padding: 14px 32px;
+  padding: 13px clamp(16px, 4vw, 32px);
   font-family: 'Inter', sans-serif;
-  font-size: 0.88rem;
+  font-size: clamp(0.78rem, 2.5vw, 0.88rem);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   border-radius: 4px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
   white-space: nowrap;
+  width: 100%;
 }
 .btn-primary:hover {
   background: var(--accent-light);
@@ -196,19 +196,21 @@ body::-webkit-scrollbar-thumb  { background: var(--accent); border-radius: 2px; 
   background: transparent;
   color: #fff;
   border: 1px solid rgba(255,255,255,0.4);
-  padding: 14px 32px;
+  padding: 13px clamp(16px, 4vw, 32px);
   font-family: 'Inter', sans-serif;
-  font-size: 0.88rem;
+  font-size: clamp(0.78rem, 2.5vw, 0.88rem);
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   border-radius: 4px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   transition: border-color 0.25s ease, background 0.25s ease, transform 0.2s ease;
   white-space: nowrap;
+  width: 100%;
 }
 .btn-outline:hover {
   border-color: rgba(255,255,255,0.8);
@@ -286,7 +288,7 @@ body::-webkit-scrollbar-thumb  { background: var(--accent); border-radius: 2px; 
 .timeline-card {
   width: 100%;
   max-width: 400px;
-  padding: 24px 28px;
+  padding: clamp(16px, 4vw, 28px);
   border-radius: 16px;
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
@@ -384,7 +386,7 @@ body::-webkit-scrollbar-thumb  { background: var(--accent); border-radius: 2px; 
 }
 
 .story-card {
-  padding: 20px 24px;
+  padding: clamp(14px, 3.5vw, 24px);
   border-radius: 14px;
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
