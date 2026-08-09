@@ -77,15 +77,14 @@ const LS_KEY = 'saill_media_store';
 export async function uploadToSupabase(dataUrlOrFile, path) {
   if (!supabase) throw new Error('Supabase not configured');
 
-  let file;
+  let file, mimeType;
   if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
-    // Convert base64 dataURL → Blob
     const [header, b64] = dataUrlOrFile.split(',');
-    const mime = header.match(/:(.*?);/)[1];
+    mimeType = header.match(/:(.*?);/)[1];
     const binary = atob(b64);
     const arr = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
-    file = new Blob([arr], { type: mime });
+    file = new Blob([arr], { type: mimeType });
   } else {
     file = dataUrlOrFile;
   }
@@ -94,7 +93,10 @@ export async function uploadToSupabase(dataUrlOrFile, path) {
     .from(BUCKET)
     .upload(path, file, { upsert: true });
 
-  if (error) throw error;
+  if (error) {
+    // Bucket not ready — throw so AdminPanel can catch and fall back to base64
+    throw new Error(error.message);
+  }
 
   const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return urlData.publicUrl;
@@ -105,12 +107,11 @@ async function readSupabaseStore() {
   if (!supabase) return null;
   try {
     const { data, error } = await supabase.from(TABLE).select('id, value');
-    if (error) return null;
+    if (error) { return null; } // table not ready yet, use local fallback silently
     const store = { ...defaultStore };
     for (const row of data || []) {
       try { store[row.id] = JSON.parse(row.value); } catch { store[row.id] = row.value; }
     }
-    // Ensure nested defaults
     store.questions     = defaultQuestions.map((dq, i) =>
       store.questions?.[i] ? { ...dq, ...store.questions[i] } : dq
     );
@@ -123,7 +124,9 @@ async function readSupabaseStore() {
 /** Write a single key to Supabase DB */
 async function writeSupabaseKey(key, value) {
   if (!supabase) return;
-  await supabase.from(TABLE).upsert({ id: key, value: JSON.stringify(value) });
+  try {
+    await supabase.from(TABLE).upsert({ id: key, value: JSON.stringify(value) });
+  } catch { /* silently ignore if table not ready */ }
 }
 
 /* ═════════════════════════════════════════════════════════

@@ -21,9 +21,14 @@ function fileToDataURL(file) {
 /** Upload a file — to Supabase Storage if configured, else base64 dataURL */
 async function uploadFile(file, pathPrefix = 'media') {
   if (hasSupabase()) {
-    const ext  = file.name.split('.').pop();
-    const path = `${pathPrefix}/${Date.now()}.${ext}`;
-    return uploadToSupabase(file, path);
+    try {
+      const ext  = file.name.split('.').pop();
+      const path = `${pathPrefix}/${Date.now()}.${ext}`;
+      return await uploadToSupabase(file, path);
+    } catch (e) {
+      console.warn('Supabase storage not ready, using local base64:', e.message);
+      // Fall through to base64
+    }
   }
   return fileToDataURL(file);
 }
@@ -149,7 +154,7 @@ function MediaPicker({ label, accept, currentSrc, onSave }) {
       onSave(url);
     } catch (err) {
       console.error('Upload failed:', err);
-      alert('Upload failed. Check Supabase config or try a URL instead.');
+      console.warn('Upload failed, used local fallback');
     }
   };
 
@@ -275,7 +280,7 @@ function MusicPicker({ currentUrl, onSave }) {
       onSave(url);
     } catch (err) {
       console.error('Audio upload failed:', err);
-      alert('Upload failed. Check Supabase config or try a URL instead.');
+      console.warn('Upload failed, used local fallback');
     }
     e.target.value = '';
   };
@@ -554,7 +559,7 @@ export default function AdminPanel({ onClose }) {
         src = await uploadFile(srcOrFile, 'gallery');
       } catch (err) {
         console.error('Gallery upload failed:', err);
-        alert('Upload failed. Try a URL instead.');
+        console.warn('Upload failed, used local fallback');
         return;
       }
     }
