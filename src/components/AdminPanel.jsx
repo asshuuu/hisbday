@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { readStore, readStoreAsync, writeStore, deriveCode, SECTIONS } from '../hooks/useMediaStore';
+import { readStore, readStoreAsync, writeStore, deriveCode, SECTIONS, uploadToSupabase } from '../hooks/useMediaStore';
 import { THEMES, applyTheme, getSavedThemeId } from '../hooks/useTheme';
 import useStore from '../hooks/useStore';
+import { hasSupabase } from '../lib/supabase';
 
 /* ─── Password (change this!) ─────────────────────────── */
 const ADMIN_PASSWORD = 'saill2024';
@@ -15,6 +16,16 @@ function fileToDataURL(file) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
+}
+
+/** Upload a file — to Supabase Storage if configured, else base64 dataURL */
+async function uploadFile(file, pathPrefix = 'media') {
+  if (hasSupabase()) {
+    const ext  = file.name.split('.').pop();
+    const path = `${pathPrefix}/${Date.now()}.${ext}`;
+    return uploadToSupabase(file, path);
+  }
+  return fileToDataURL(file);
 }
 
 function Toast({ message, type }) {
@@ -55,7 +66,7 @@ function Label({ children }) {
   );
 }
 
-/* ─── Input ───────────────────────────────────────────── */
+/* ─── Input (immediate — for non-text fields like URLs) ── */
 function Input({ placeholder, value, onChange, type = 'text' }) {
   return (
     <input
@@ -81,6 +92,49 @@ function Input({ placeholder, value, onChange, type = 'text' }) {
   );
 }
 
+/* ─── DebouncedInput (for text fields that save to store) ─ */
+function DebouncedInput({ placeholder, value: externalValue, onSave, type = 'text' }) {
+  const [local, setLocal] = useState(externalValue || '');
+  const timerRef          = useRef(null);
+  const isFocused         = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused.current) setLocal(externalValue || '');
+  }, [externalValue]);
+
+  return (
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={local}
+      onChange={e => {
+        setLocal(e.target.value);
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => onSave(e.target.value), 600);
+      }}
+      onFocus={e => { isFocused.current = true; e.target.style.borderColor = '#E50914'; }}
+      onBlur={e  => {
+        isFocused.current = false;
+        clearTimeout(timerRef.current);
+        onSave(local);
+        e.target.style.borderColor = 'rgba(255,255,255,0.12)';
+      }}
+      style={{
+        width: '100%',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        color: '#fff',
+        fontSize: '0.85rem',
+        fontFamily: 'Inter, sans-serif',
+        outline: 'none',
+        transition: 'border-color 0.2s',
+      }}
+    />
+  );
+}
+
 /* ─── File-or-URL picker ──────────────────────────────── */
 function MediaPicker({ label, accept, currentSrc, onSave }) {
   const [url,  setUrl]  = useState('');
@@ -90,8 +144,13 @@ function MediaPicker({ label, accept, currentSrc, onSave }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const dataUrl = await fileToDataURL(file);
-    onSave(dataUrl);
+    try {
+      const url = await uploadFile(file, 'images');
+      onSave(url);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Upload failed. Check Supabase config or try a URL instead.');
+    }
   };
 
   return (
@@ -211,9 +270,13 @@ function MusicPicker({ currentUrl, onSave }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const r = new FileReader();
-    r.onload = (ev) => onSave(ev.target.result);
-    r.readAsDataURL(file);
+    try {
+      const url = await uploadFile(file, 'audio');
+      onSave(url);
+    } catch (err) {
+      console.error('Audio upload failed:', err);
+      alert('Upload failed. Check Supabase config or try a URL instead.');
+    }
     e.target.value = '';
   };
 
@@ -367,6 +430,58 @@ function ThemePicker() {
   );
 }
 
+/* ─── Debounced Textarea ─────────────────────────────── */
+function DebouncedTextarea({ value: externalValue, onSave, placeholder, rows = 5, style = {} }) {
+  const [local, setLocal]   = useState(externalValue || '');
+  const timerRef            = useRef(null);
+  const isFocused           = useRef(false);
+
+  // Sync external value only when not focused (avoids clobbering user input)
+  useEffect(() => {
+    if (!isFocused.current) {
+      setLocal(externalValue || '');
+    }
+  }, [externalValue]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setLocal(val);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onSave(val), 800);
+  };
+
+  const handleBlur = (e) => {
+    isFocused.current = false;
+    clearTimeout(timerRef.current);
+    onSave(local);
+    e.target.style.borderColor = 'rgba(255,255,255,0.12)';
+  };
+
+  return (
+    <textarea
+      value={local}
+      onChange={handleChange}
+      onFocus={e => { isFocused.current = true; e.target.style.borderColor = '#E50914'; }}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      rows={rows}
+      style={{
+        width: '100%',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: '8px',
+        padding: '12px 14px',
+        color: '#fff',
+        outline: 'none',
+        resize: 'vertical',
+        lineHeight: 1.8,
+        transition: 'border-color 0.2s',
+        ...style,
+      }}
+    />
+  );
+}
+
 /* ─── Divider ─────────────────────────────────────────── */
 function Divider({ label }) {
   return (
@@ -435,7 +550,13 @@ export default function AdminPanel({ onClose }) {
   const addGalleryPhoto = async (srcOrFile) => {
     let src = srcOrFile;
     if (srcOrFile instanceof File) {
-      src = await fileToDataURL(srcOrFile);
+      try {
+        src = await uploadFile(srcOrFile, 'gallery');
+      } catch (err) {
+        console.error('Gallery upload failed:', err);
+        alert('Upload failed. Try a URL instead.');
+        return;
+      }
     }
     if (!src) return;
     const photos = [...store.galleryPhotos, { id: Date.now().toString(), src, label: newPhotoLabel || 'Memory' }];
@@ -624,11 +745,11 @@ export default function AdminPanel({ onClose }) {
 
                     {/* Track name */}
                     <div style={{ marginBottom:'8px' }}>
-                      <Input
+                      <DebouncedInput
                         placeholder="Track name (e.g. Our Song)"
                         value={track.name || ''}
-                        onChange={e => {
-                          const tracks = { ...store.sectionTracks, [section.id]: { ...track, name: e.target.value } };
+                        onSave={v => {
+                          const tracks = { ...store.sectionTracks, [section.id]: { ...track, name: v } };
                           save({ sectionTracks: tracks });
                         }}
                       />
@@ -667,10 +788,10 @@ export default function AdminPanel({ onClose }) {
 
               <div style={{ marginBottom: '20px' }}>
                 <Label>Card Label</Label>
-                <Input
+                <DebouncedInput
                   placeholder="e.g. Our Special Surprise 💫"
                   value={store.scratchLabel || ''}
-                  onChange={e => save({ scratchLabel: e.target.value })}
+                  onSave={v => save({ scratchLabel: v })}
                 />
               </div>
 
@@ -680,27 +801,12 @@ export default function AdminPanel({ onClose }) {
                 <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', fontFamily: 'Inter, sans-serif', marginBottom: '8px', lineHeight: 1.5 }}>
                   This appears below the card with "Happy Birthday Sailu Nanna" once the photo is revealed.
                 </p>
-                <textarea
-                  placeholder="Write your birthday message here…"
+                <DebouncedTextarea
                   value={store.scratchRevealMessage || ''}
-                  onChange={e => save({ scratchRevealMessage: e.target.value })}
+                  onSave={v => save({ scratchRevealMessage: v })}
+                  placeholder="Write your birthday message here…"
                   rows={5}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    color: '#fff',
-                    fontSize: '0.85rem',
-                    fontFamily: 'Inter, sans-serif',
-                    outline: 'none',
-                    resize: 'vertical',
-                    lineHeight: 1.7,
-                    transition: 'border-color 0.2s',
-                  }}
-                  onFocus={e => (e.target.style.borderColor = '#E50914')}
-                  onBlur={e  => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
+                  style={{ fontSize: '0.85rem', fontFamily: 'Inter, sans-serif' }}
                 />
               </div>
 
@@ -731,16 +837,16 @@ export default function AdminPanel({ onClose }) {
                     Question {i + 1}
                   </p>
                   <div style={{ marginBottom:'8px' }}>
-                    <Input
+                    <DebouncedInput
                       placeholder={`Question ${i+1} (shown to Saill)`}
                       value={q.question}
-                      onChange={e => updateQuestion(q.id, 'question', e.target.value)}
+                      onSave={v => updateQuestion(q.id, 'question', v)}
                     />
                   </div>
-                  <Input
+                  <DebouncedInput
                     placeholder="Answer (only 1st letter is used as the code)"
                     value={q.answer}
-                    onChange={e => updateQuestion(q.id, 'answer', e.target.value)}
+                    onSave={v => updateQuestion(q.id, 'answer', v)}
                   />
                   {q.answer?.trim() && (
                     <p style={{ color:'rgba(229,9,20,0.7)', fontSize:'0.72rem', fontFamily:'Inter, sans-serif', marginTop:'6px' }}>
@@ -810,21 +916,17 @@ export default function AdminPanel({ onClose }) {
                 Write Saill's birthday letter here. It appears in the final Birthday section.
                 Separate paragraphs with a blank line.
               </p>
-              <textarea
-                placeholder="Dear Saill,&#10;&#10;Write your heartfelt message here...&#10;&#10;With love ❤️"
+              <DebouncedTextarea
                 value={store.birthdayLetter || ''}
-                onChange={e => save({ birthdayLetter: e.target.value })}
+                onSave={v => save({ birthdayLetter: v })}
+                placeholder={"Dear Saill,\n\nWrite your heartfelt message here...\n\nWith love ❤️"}
                 rows={8}
                 style={{
-                  width:'100%', background:'rgba(255,255,255,0.05)',
-                  border:'1px solid rgba(255,255,255,0.12)', borderRadius:'8px',
-                  padding:'12px 14px', color:'#fff', fontSize:'0.88rem',
-                  fontFamily:'Cormorant Garamond, serif', fontStyle:'italic',
-                  outline:'none', resize:'vertical', lineHeight:1.8,
-                  transition:'border-color 0.2s', marginBottom:'16px',
+                  fontSize: '0.88rem',
+                  fontFamily: 'Cormorant Garamond, serif',
+                  fontStyle: 'italic',
+                  marginBottom: '16px',
                 }}
-                onFocus={e=>(e.target.style.borderColor='#E50914')}
-                onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,0.12)')}
               />
 
               {/* ── 5. COLOUR THEME ─────────────────────── */}
