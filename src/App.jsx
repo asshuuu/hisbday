@@ -5,7 +5,6 @@ import './App.css';
 import LoadingScreen    from './components/LoadingScreen';
 import Navbar           from './components/Navbar';
 import HeroSection      from './components/HeroSection';
-import ChildhoodSection from './components/ChildhoodSection';
 import OurStorySection  from './components/OurStorySection';
 import GallerySection   from './components/GallerySection';
 import ScratchSection   from './components/ScratchSection';
@@ -82,7 +81,6 @@ export default function App() {
 
             <main>
               <HeroSection      onBegin={handleBeginJourney} />
-              <ChildhoodSection />
               <OurStorySection  />
               <GallerySection   />
               <ScratchSection   />

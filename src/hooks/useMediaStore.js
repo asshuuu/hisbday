@@ -26,7 +26,6 @@ const BLOB_PREFIX = '__idb__:';   // marks a value as "look up this key in IDB"
 
 export const SECTIONS = [
   { id: 'home',      label: 'Hero',      icon: '🎬' },
-  { id: 'childhood', label: 'Childhood', icon: '👶' },
   { id: 'our-story', label: 'Our Story', icon: '❤️' },
   { id: 'gallery',   label: 'Gallery',   icon: '🖼️' },
   { id: 'surprises', label: 'Surprises', icon: '🎁' },
@@ -54,6 +53,7 @@ export const defaultStore = {
   heroVideo:            null,
   heroFallback:         null,
   scratchSrc:           null,
+  scratchSrc2:          null,    // second surprise image shown after reveal
   scratchLabel:         'Our Special Surprise 💫',
   scratchRevealMessage: 'Every moment with you is a gift I never want to stop unwrapping. You make every single day brighter just by being you. Today and always — I am so grateful you exist. 🌸',
   surpriseBg:           null,

@@ -651,10 +651,18 @@ export default function AdminPanel({ onClose }) {
 
               {/* Single scratch photo */}
               <MediaPicker
-                label="Scratch Card Photo"
+                label="Scratch Card Photo (hidden behind scratch)"
                 accept="image/*"
                 currentSrc={store.scratchSrc}
                 onSave={(v) => save({ scratchSrc: v })}
+              />
+
+              {/* Second surprise image */}
+              <MediaPicker
+                label="Second Surprise Image (shown below message after reveal)"
+                accept="image/*"
+                currentSrc={store.scratchSrc2}
+                onSave={(v) => save({ scratchSrc2: v })}
               />
 
               <div style={{ marginBottom: '20px' }}>

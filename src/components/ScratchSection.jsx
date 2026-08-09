@@ -406,9 +406,9 @@ function HeartBurst() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   REVEAL CELEBRATION  — title + message card
+   REVEAL CELEBRATION  — title + message card + optional 2nd image
 ═══════════════════════════════════════════════════════════ */
-function RevealCelebration({ message }) {
+function RevealCelebration({ message, img2 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 32 }}
@@ -519,6 +519,30 @@ function RevealCelebration({ message }) {
           <div style={{ flex: 1, height: '1px', background: 'rgba(229,9,20,0.2)' }} />
         </div>
       </motion.div>
+
+      {/* ── Second surprise image ─────────────────────── */}
+      {img2 && (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1 }}
+          style={{ marginTop: '24px' }}
+        >
+          <img
+            src={img2}
+            alt="Another surprise"
+            style={{
+              width: '100%',
+              borderRadius: '16px',
+              display: 'block',
+              objectFit: 'contain',
+              maxHeight: '70vw',
+              border: '1px solid rgba(229,9,20,0.2)',
+              boxShadow: '0 12px 40px rgba(229,9,20,0.15)',
+            }}
+          />
+        </motion.div>
+      )}
     </motion.div>
   );
 }
@@ -707,7 +731,7 @@ export default function ScratchSection() {
               {/* Celebration appears below card after reveal */}
               <AnimatePresence>
                 {cardRevealed && (
-                  <RevealCelebration message={store.scratchRevealMessage} />
+                  <RevealCelebration message={store.scratchRevealMessage} img2={store.scratchSrc2} />
                 )}
               </AnimatePresence>
             </motion.div>
