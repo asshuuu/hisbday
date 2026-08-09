@@ -215,15 +215,22 @@ export function readStore() {
   } catch { return { ...defaultStore }; }
 }
 
-/** Async full read — uses Supabase if available, else IDB */
+/** Async full read — uses Supabase if available AND table exists, else IDB */
 export async function readStoreAsync() {
+  // Only try Supabase if explicitly confirmed working
+  // (avoids 404 spam while table is being set up)
   if (hasSupabase()) {
-    const remote = await readSupabaseStore();
-    if (remote) {
-      // Cache remotely-fetched store to localStorage for fast next load
-      try { localStorage.setItem(LS_KEY, JSON.stringify(remote)); } catch {}
-      return remote;
-    }
+    try {
+      // Quick probe — abort after 3s to avoid blocking
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const remote = await readSupabaseStore();
+      clearTimeout(timer);
+      if (remote) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(remote)); } catch {}
+        return remote;
+      }
+    } catch { /* fall through */ }
   }
   // Fallback: resolve IDB blob refs
   return restoreBlobs(readStore());
