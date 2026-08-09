@@ -21,7 +21,7 @@ export default function HeroSection({ onBegin }) {
   }, [store.heroVideo]);
 
   const scrollToExplore = () =>
-    document.getElementById('childhood')?.scrollIntoView({ behavior: 'smooth' });
+    window.scrollBy({ top: window.innerHeight * 0.85, behavior: 'smooth' });
 
   const stars = useMemo(
     () =>
