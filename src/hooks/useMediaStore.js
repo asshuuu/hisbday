@@ -23,14 +23,14 @@ export const defaultQuestions = [
 ];
 
 const defaultSectionTracks = Object.fromEntries(
-  SECTIONS.map(s => [s.id, { url: '', name: '' }])
+  SECTIONS.map(s => [s.id, { url: '/song.mp3', name: 'Our Song 🎵' }])
 );
 
 export const defaultStore = {
   // ── Labels & text (admin-editable) ────────────────────
   scratchLabel:         'Our Special Surprise 💫',
-  scratchRevealMessage: 'Every moment with you is a gift I never want to stop unwrapping. You make every single day brighter just by being you. Today and always — I am so grateful you exist. 🌸',
-  birthdayLetter:       '',
+  scratchRevealMessage: 'Nenu yeppudu neetho unnanu,nuvvu asshu tho happy ga undu.Eppati nunchi ninnu nuvvu thittukoku alane nuvvu puttadame sad adhi idhi anaku.sare na Mummy mata vinu Inkeppudu badha padaku nenu lenu nenu unnanu nanna.I Love You Sailuu Bangaram.Nenu yeppudu neetho unnanu,nuvvu asshu tho happy ga undu.Eppati nunchi ninnu nuvvu thittukoku alane nuvvu puttadame sad adhi idhi anaku.sare na Mummy mata vinu Inkeppudu badha padaku nenu lenu nenu unnanu nanna.I Love You Sailuu Bangaram.',
+  birthdayLetter:       'My Dear Sailll, My Dudu My Bangaram,\n\nI love you sooo much.......infinity\n\nNenu ni birthday ni ee year special ga chesano ledho naku telidhu but chala try chesa best ivvadaniki.\n\nHappy Birthday King Dudu\n\nErojuki mathrame nuvvuu KING so be Happy\n\nBUBU RANI eroju ninnu kottaddhu thittadhu so jagratha ga unduu. ❤️',
   questions:            defaultQuestions,
   sectionTracks:        defaultSectionTracks,
 
@@ -38,8 +38,8 @@ export const defaultStore = {
   // Drop files in /public and set the path here, OR paste a URL in admin panel
   heroVideo:    'https://sqzpswpmkucpetunjpek.supabase.co/storage/v1/object/public/saill-media/herobg.mp4',
   heroFallback: '',
-  scratchSrc:   '',
-  scratchSrc2:  '',
+  scratchSrc:   '/scratch1.png',   // ← put path here e.g. '/scratch.jpg'
+  scratchSrc2:  '/scratch2.png',   // ← put path here e.g. '/scratch2.jpg'
 
   // Our story timeline image paths — set to e.g. '/story/s1.jpg'
   timelineImages: {
