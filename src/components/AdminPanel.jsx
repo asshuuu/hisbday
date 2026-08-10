@@ -18,18 +18,32 @@ function fileToDataURL(file) {
   });
 }
 
-/** Upload a file — to Supabase Storage if configured, else base64 dataURL */
+/** Upload a file — to Supabase Storage if confirmed, else base64 for images, blob URL for video/audio */
 async function uploadFile(file, pathPrefix = 'media') {
+  const isVideo = file.type.startsWith('video/');
+  const isAudio = file.type.startsWith('audio/');
+  const isBig   = file.size > 5 * 1024 * 1024; // > 5MB
+
   if (hasSupabase()) {
     try {
       const ext  = file.name.split('.').pop();
       const path = `${pathPrefix}/${Date.now()}.${ext}`;
       return await uploadToSupabase(file, path);
     } catch (e) {
-      console.warn('Supabase storage not ready, using local base64:', e.message);
-      // Fall through to base64
+      console.warn('Supabase storage not ready:', e.message);
     }
   }
+
+  // For large files (video/audio > 5MB) — create a temporary blob URL
+  // It works for the current session but won't persist across reloads.
+  // Solution: use a URL instead of uploading a file for videos.
+  if (isVideo || isAudio || isBig) {
+    // Store as blob URL — works this session only
+    const blobUrl = URL.createObjectURL(file);
+    return blobUrl;
+  }
+
+  // Small images — convert to base64 (persists in IDB)
   return fileToDataURL(file);
 }
 
@@ -149,11 +163,17 @@ function MediaPicker({ label, accept, currentSrc, onSave }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    const isAudio = file.type.startsWith('audio/');
     try {
-      const url = await uploadFile(file, 'images');
+      const path = isVideo ? 'videos' : isAudio ? 'audio' : 'images';
+      const url = await uploadFile(file, path);
       onSave(url);
+      if (isVideo && url.startsWith('blob:')) {
+        // Show info that blob URL is temporary
+        console.info('Video loaded as temporary URL. For permanent storage, use a URL (YouTube/Drive/Cloudinary).');
+      }
     } catch (err) {
-      console.error('Upload failed:', err);
       console.warn('Upload failed, used local fallback');
     }
   };
@@ -715,6 +735,9 @@ export default function AdminPanel({ onClose }) {
                 currentSrc={store.heroVideo}
                 onSave={(v) => save({ heroVideo: v })}
               />
+              <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.7rem', fontFamily:'Inter, sans-serif', marginBottom:'16px', lineHeight:1.6, marginTop:'-16px' }}>
+                💡 For best results, paste a video URL (Google Drive, Cloudinary, etc.) instead of uploading. Uploaded video files only work in the current session.
+              </p>
 
               <MediaPicker
                 label="Fallback Image (shown while video loads)"
