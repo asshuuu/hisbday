@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Large media files — deploy separately or use CDN
+public/herovideo.mp4
+public/*.mp4
+public/*.webm
+public/*.mov
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
