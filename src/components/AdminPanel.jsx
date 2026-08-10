@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { readStore, readStoreAsync, writeStore, deriveCode, SECTIONS, uploadToSupabase } from '../hooks/useMediaStore';
+import { readStore, writeStore, deriveCode, SECTIONS } from '../hooks/useMediaStore';
 import { THEMES, applyTheme, getSavedThemeId } from '../hooks/useTheme';
 import useStore from '../hooks/useStore';
-import { hasSupabase } from '../lib/supabase';
 
 /* ─── Password (change this!) ─────────────────────────── */
 const ADMIN_PASSWORD = 'saill2024';
@@ -18,32 +17,21 @@ function fileToDataURL(file) {
   });
 }
 
-/** Upload a file — to Supabase Storage if confirmed, else base64 for images, blob URL for video/audio */
-async function uploadFile(file, pathPrefix = 'media') {
+/**
+ * Upload a file.
+ * Images < 4MB → base64 stored in IDB (persists).
+ * Video/Audio/Large files → CANNOT be stored locally. Must use a URL.
+ * Blob URLs are never saved — they die on page reload.
+ */
+async function uploadFile(file) {
   const isVideo = file.type.startsWith('video/');
   const isAudio = file.type.startsWith('audio/');
-  const isBig   = file.size > 5 * 1024 * 1024; // > 5MB
+  const isBig   = file.size > 4 * 1024 * 1024;
 
-  if (hasSupabase()) {
-    try {
-      const ext  = file.name.split('.').pop();
-      const path = `${pathPrefix}/${Date.now()}.${ext}`;
-      return await uploadToSupabase(file, path);
-    } catch (e) {
-      console.warn('Supabase storage not ready:', e.message);
-    }
-  }
-
-  // For large files (video/audio > 5MB) — create a temporary blob URL
-  // It works for the current session but won't persist across reloads.
-  // Solution: use a URL instead of uploading a file for videos.
   if (isVideo || isAudio || isBig) {
-    // Store as blob URL — works this session only
-    const blobUrl = URL.createObjectURL(file);
-    return blobUrl;
+    // Cannot store large files locally — tell the user
+    throw new Error('FILE_TOO_LARGE');
   }
-
-  // Small images — convert to base64 (persists in IDB)
   return fileToDataURL(file);
 }
 
@@ -163,19 +151,15 @@ function MediaPicker({ label, accept, currentSrc, onSave }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const isVideo = file.type.startsWith('video/');
-    const isAudio = file.type.startsWith('audio/');
     try {
-      const path = isVideo ? 'videos' : isAudio ? 'audio' : 'images';
-      const url = await uploadFile(file, path);
+      const url = await uploadFile(file);
       onSave(url);
-      if (isVideo && url.startsWith('blob:')) {
-        // Show info that blob URL is temporary
-        console.info('Video loaded as temporary URL. For permanent storage, use a URL (YouTube/Drive/Cloudinary).');
-      }
     } catch (err) {
-      console.warn('Upload failed, used local fallback');
+      if (err.message === 'FILE_TOO_LARGE') {
+        alert('⚠️ File too large for local storage.\n\nFor videos & audio: upload to Google Drive, Cloudinary, or any host and paste the direct URL instead.');
+      }
     }
+    e.target.value = '';
   };
 
   return (
@@ -296,11 +280,12 @@ function MusicPicker({ currentUrl, onSave }) {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const url = await uploadFile(file, 'audio');
+      const url = await uploadFile(file);
       onSave(url);
     } catch (err) {
-      console.error('Audio upload failed:', err);
-      console.warn('Upload failed, used local fallback');
+      if (err.message === 'FILE_TOO_LARGE') {
+        alert('⚠️ Audio files too large for local storage.\nUpload to any host and paste the URL instead.');
+      }
     }
     e.target.value = '';
   };

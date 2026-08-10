@@ -1,28 +1,12 @@
 /**
- * useMediaStore
- * ─────────────────────────────────────────────────────────
- * Storage strategy:
- *
- *  IF Supabase is configured:
- *    • Files (images/video/audio) → Supabase Storage bucket
- *    • Config (text, labels, etc.) → Supabase DB table `saill_config`
- *    • localStorage used only as a fast read-cache
- *
- *  ELSE (no Supabase):
- *    • Files → IndexedDB (browser-local, does not sync across devices)
- *    • Config → localStorage
- *
- * Table schema (saill_config):
- *   id    TEXT PRIMARY KEY   -- e.g. "heroVideo", "scratchLabel"
- *   value TEXT               -- JSON-encoded value
- *
- * Storage bucket: "saill-media" (public, no auth required for GET)
+ * useMediaStore — IDB + localStorage storage
+ * No Supabase calls here. Supabase is used only in AdminPanel
+ * for file uploads when the bucket is confirmed working.
+ * Small files (images) → base64 in IndexedDB
+ * Large files (video/audio) → must use URL (paste in admin panel)
  */
-
 import { useState, useEffect } from 'react';
-import { supabase, BUCKET, TABLE, hasSupabase } from '../lib/supabase';
 
-/* ─── Section list ──────────────────────────────────────── */
 export const SECTIONS = [
   { id: 'home',      label: 'Hero',      icon: '🎬' },
   { id: 'our-story', label: 'Our Story', icon: '❤️' },
@@ -30,7 +14,6 @@ export const SECTIONS = [
   { id: 'birthday',  label: 'Birthday',  icon: '🎂' },
 ];
 
-/* ─── Defaults ──────────────────────────────────────────── */
 export const defaultQuestions = [
   { id: 'q1', question: 'What is your favourite flower?',       answer: '' },
   { id: 'q2', question: 'Which city holds our best memory?',    answer: '' },
@@ -48,242 +31,148 @@ const defaultSectionTracks = Object.fromEntries(
 );
 
 export const defaultStore = {
-  heroVideo:            null,
-  heroFallback:         null,
-  scratchSrc:           null,
-  scratchSrc2:          null,
+  heroVideo:            '',
+  heroFallback:         '',
+  scratchSrc:           '',
+  scratchSrc2:          '',
   scratchLabel:         'Our Special Surprise 💫',
   scratchRevealMessage: 'Every moment with you is a gift I never want to stop unwrapping. You make every single day brighter just by being you. Today and always — I am so grateful you exist. 🌸',
-  surpriseBg:           null,
+  surpriseBg:           '',
   birthdayLetter:       '',
   questions:            defaultQuestions,
-  galleryPhotos:        [],
   sectionTracks:        defaultSectionTracks,
   timelineImages:       defaultTimelineImages,
 };
 
-/* ─── localStorage cache key ────────────────────────────── */
-const LS_KEY = 'saill_media_store';
-
-/* ═════════════════════════════════════════════════════════
-   SUPABASE BACKEND
-═════════════════════════════════════════════════════════ */
-
-/**
- * Upload a file (dataURL or File) to Supabase Storage.
- * Returns the public URL.
- */
-export async function uploadToSupabase(dataUrlOrFile, path) {
-  if (!supabase) throw new Error('Supabase not configured');
-
-  let file, mimeType;
-  if (typeof dataUrlOrFile === 'string' && dataUrlOrFile.startsWith('data:')) {
-    const [header, b64] = dataUrlOrFile.split(',');
-    mimeType = header.match(/:(.*?);/)[1];
-    const binary = atob(b64);
-    const arr = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
-    file = new Blob([arr], { type: mimeType });
-  } else {
-    file = dataUrlOrFile;
-  }
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, { upsert: true });
-
-  if (error) {
-    // Bucket not ready — throw so AdminPanel can catch and fall back to base64
-    throw new Error(error.message);
-  }
-
-  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return urlData.publicUrl;
-}
-
-/** Read entire config from Supabase DB */
-async function readSupabaseStore() {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase.from(TABLE).select('id, value');
-    if (error) { return null; } // table not ready yet, use local fallback silently
-    const store = { ...defaultStore };
-    for (const row of data || []) {
-      try { store[row.id] = JSON.parse(row.value); } catch { store[row.id] = row.value; }
-    }
-    store.questions     = defaultQuestions.map((dq, i) =>
-      store.questions?.[i] ? { ...dq, ...store.questions[i] } : dq
-    );
-    store.sectionTracks  = { ...defaultSectionTracks,  ...(store.sectionTracks  || {}) };
-    store.timelineImages = { ...defaultTimelineImages, ...(store.timelineImages || {}) };
-    return store;
-  } catch { return null; }
-}
-
-/** Write a single key to Supabase DB */
-async function writeSupabaseKey(key, value) {
-  if (!supabase) return;
-  try {
-    await supabase.from(TABLE).upsert({ id: key, value: JSON.stringify(value) });
-  } catch { /* silently ignore if table not ready */ }
-}
-
-/* ═════════════════════════════════════════════════════════
-   LOCAL FALLBACK (IndexedDB + localStorage)
-═════════════════════════════════════════════════════════ */
-
-const IDB_NAME  = 'saill_blobs';
-const IDB_STORE = 'blobs';
+/* ─── IndexedDB helpers ──────────────────────────────── */
+const IDB_NAME    = 'saill_blobs';
+const IDB_STORE   = 'blobs';
+const LS_KEY      = 'saill_media_store';
 const BLOB_PREFIX = '__idb__:';
 let _db = null;
 
 function openDB() {
   if (_db) return Promise.resolve(_db);
-  return new Promise((resolve, reject) => {
+  return new Promise((res, rej) => {
     const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = (e) => e.target.result.createObjectStore(IDB_STORE);
-    req.onsuccess  = (e) => { _db = e.target.result; resolve(_db); };
-    req.onerror    = (e) => reject(e.target.error);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess  = e => { _db = e.target.result; res(_db); };
+    req.onerror    = e => rej(e.target.error);
   });
 }
-async function idbPut(key, value) {
-  const db  = await openDB();
+async function idbPut(key, val) {
+  const db = await openDB();
   return new Promise((res, rej) => {
-    const tx  = db.transaction(IDB_STORE, 'readwrite');
-    const req = tx.objectStore(IDB_STORE).put(value, key);
-    req.onsuccess = () => res(); req.onerror = (e) => rej(e.target.error);
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(val, key).onsuccess = res;
+    tx.onerror = e => rej(e.target.error);
   });
 }
 async function idbGet(key) {
-  const db  = await openDB();
+  const db = await openDB();
   return new Promise((res, rej) => {
-    const tx  = db.transaction(IDB_STORE, 'readonly');
+    const tx = db.transaction(IDB_STORE, 'readonly');
     const req = tx.objectStore(IDB_STORE).get(key);
-    req.onsuccess = (e) => res(e.target.result ?? null);
-    req.onerror   = (e) => rej(e.target.error);
+    req.onsuccess = e => res(e.target.result ?? null);
+    req.onerror   = e => rej(e.target.error);
   });
 }
 
-function isBlob(v)   { return typeof v === 'string' && v.startsWith('data:'); }
-function idbKey(p)   { return `${LS_KEY}::${p}`; }
-function idbRef(p)   { return `${BLOB_PREFIX}${idbKey(p)}`; }
-function isIdbRef(v) { return typeof v === 'string' && v.startsWith(BLOB_PREFIX); }
-function getIdbKey(r){ return r.slice(BLOB_PREFIX.length); }
+function isBase64(v) { return typeof v === 'string' && v.startsWith('data:'); }
+function idbRef(k)   { return `${BLOB_PREFIX}${k}`; }
+function isRef(v)    { return typeof v === 'string' && v.startsWith(BLOB_PREFIX); }
+function refKey(v)   { return v.slice(BLOB_PREFIX.length); }
 
+/** Walk an object, store base64 blobs in IDB, replace with refs */
 async function separateBlobs(obj, path = '') {
-  if (typeof obj !== 'object' || obj === null) return obj;
+  if (typeof obj !== 'object' || !obj) return obj;
   if (Array.isArray(obj)) return Promise.all(obj.map((v,i) => separateBlobs(v, `${path}[${i}]`)));
-  const result = {};
+  const out = {};
   for (const [k, v] of Object.entries(obj)) {
     const p = path ? `${path}.${k}` : k;
-    if (isBlob(v)) { await idbPut(idbKey(p), v); result[k] = idbRef(p); }
-    else if (typeof v === 'object' && v !== null) result[k] = await separateBlobs(v, p);
-    else result[k] = v;
+    if (isBase64(v)) { await idbPut(p, v); out[k] = idbRef(p); }
+    else if (typeof v === 'object' && v) out[k] = await separateBlobs(v, p);
+    else out[k] = v;
   }
-  return result;
+  return out;
 }
 
+/** Walk an object, replace IDB refs with real blobs */
 export async function restoreBlobs(obj) {
-  if (typeof obj !== 'object' || obj === null) return obj;
+  if (typeof obj !== 'object' || !obj) return obj;
   if (Array.isArray(obj)) return Promise.all(obj.map(v => restoreBlobs(v)));
-  const result = {};
+  const out = {};
   for (const [k, v] of Object.entries(obj)) {
-    if (isIdbRef(v))                              result[k] = (await idbGet(getIdbKey(v))) ?? '';
-    else if (typeof v === 'object' && v !== null) result[k] = await restoreBlobs(v);
-    else                                          result[k] = v;
+    if (isRef(v))                              out[k] = (await idbGet(refKey(v))) ?? '';
+    else if (typeof v === 'object' && v)       out[k] = await restoreBlobs(v);
+    else                                       out[k] = v;
   }
-  return result;
+  return out;
 }
 
-/* ═════════════════════════════════════════════════════════
-   PUBLIC API
-═════════════════════════════════════════════════════════ */
+/* ─── Public API ─────────────────────────────────────── */
 
-// Track whether Supabase has been confirmed working this session
-let _supabaseConfirmed = false;
-
-/** Async full read — uses Supabase only if confirmed working, else IDB */
-export async function readStoreAsync() {
-  if (hasSupabase() && _supabaseConfirmed) {
-    try {
-      const remote = await readSupabaseStore();
-      if (remote) {
-        try { localStorage.setItem(LS_KEY, JSON.stringify(remote)); } catch {}
-        return remote;
-      }
-    } catch { /* fall through */ }
-  }
-  // Always use local IDB until Supabase is confirmed
-  return restoreBlobs(readStore());
-}
-
-/** Call this once to confirm Supabase is working and enable cloud sync */
-export async function confirmSupabase() {
-  if (!hasSupabase()) return false;
-  try {
-    const { error } = await supabase.from(TABLE).select('id').limit(1);
-    if (!error) { _supabaseConfirmed = true; return true; }
-    return false;
-  } catch { return false; }
-}
 export function readStore() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return { ...defaultStore };
-    const parsed = JSON.parse(raw);
-    const questions     = defaultQuestions.map((dq, i) =>
-      parsed.questions?.[i] ? { ...dq, ...parsed.questions[i] } : dq
-    );
-    const sectionTracks  = { ...defaultSectionTracks,  ...(parsed.sectionTracks  || {}) };
-    const timelineImages = { ...defaultTimelineImages, ...(parsed.timelineImages || {}) };
-    return { ...defaultStore, ...parsed, questions, sectionTracks, timelineImages };
+    const p = JSON.parse(raw);
+    return {
+      ...defaultStore,
+      ...p,
+      questions:     defaultQuestions.map((dq,i) => p.questions?.[i] ? { ...dq, ...p.questions[i] } : dq),
+      sectionTracks: { ...defaultSectionTracks,  ...(p.sectionTracks  || {}) },
+      timelineImages:{ ...defaultTimelineImages, ...(p.timelineImages || {}) },
+    };
   } catch { return { ...defaultStore }; }
 }
 
-/** Write — uses Supabase if confirmed working, else IDB+localStorage */
+/** Walk an object, strip any blob: URLs (they're dead after page reload) */
+function stripBlobUrls(obj) {
+  if (typeof obj !== 'object' || !obj) return obj;
+  if (Array.isArray(obj)) return obj.map(v => stripBlobUrls(v));
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string' && v.startsWith('blob:')) out[k] = '';
+    else if (typeof v === 'object' && v) out[k] = stripBlobUrls(v);
+    else out[k] = v;
+  }
+  return out;
+}
+
+export async function readStoreAsync() {
+  const raw = readStore();
+  const cleaned = stripBlobUrls(raw);
+  return restoreBlobs(cleaned);
+}
+
 export async function writeStore(data) {
   window.dispatchEvent(new CustomEvent('saill_store_updated', { detail: data }));
-
-  if (hasSupabase() && _supabaseConfirmed) {
-    const writes = Object.entries(data).map(([key, value]) =>
-      writeSupabaseKey(key, value)
-    );
-    await Promise.all(writes).catch(e => console.warn('Supabase write error:', e));
-    try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
-  } else {
-    try {
-      const lsData = await separateBlobs(data);
-      localStorage.setItem(LS_KEY, JSON.stringify(lsData));
-    } catch (e) { console.warn('localStorage write failed:', e); }
-  }
+  try {
+    const lsData = await separateBlobs(data);
+    localStorage.setItem(LS_KEY, JSON.stringify(lsData));
+  } catch (e) { console.warn('writeStore failed:', e); }
 }
 
-/** Derive scratch unlock code */
 export function deriveCode(questions) {
-  return questions.map(q => (q.answer || '').trim().charAt(0).toLowerCase()).join('');
+  return questions.map(q => (q.answer||'').trim().charAt(0).toLowerCase()).join('');
 }
 
-/** Reactive hook */
 export function useMediaStore() {
   const [store, setStore] = useState(readStore);
-
   useEffect(() => {
-    let cancelled = false;
-    readStoreAsync().then(full => { if (!cancelled) setStore(full); });
-    return () => { cancelled = true; };
+    let c = false;
+    readStoreAsync().then(full => { if (!c) setStore(full); });
+    return () => { c = true; };
   }, []);
-
   useEffect(() => {
-    const h = (e) => setStore({ ...e.detail });
+    const h = e => setStore({ ...e.detail });
     window.addEventListener('saill_store_updated', h);
     return () => window.removeEventListener('saill_store_updated', h);
   }, []);
-
   const update = (patch) => {
     const next = { ...store, ...patch };
-    writeStore(next);
-    setStore(next);
+    writeStore(next); setStore(next);
   };
-
   return [store, update];
 }
