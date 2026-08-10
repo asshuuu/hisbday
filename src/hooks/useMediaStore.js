@@ -200,7 +200,33 @@ export async function restoreBlobs(obj) {
    PUBLIC API
 ═════════════════════════════════════════════════════════ */
 
-/** Sync read from localStorage cache */
+// Track whether Supabase has been confirmed working this session
+let _supabaseConfirmed = false;
+
+/** Async full read — uses Supabase only if confirmed working, else IDB */
+export async function readStoreAsync() {
+  if (hasSupabase() && _supabaseConfirmed) {
+    try {
+      const remote = await readSupabaseStore();
+      if (remote) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(remote)); } catch {}
+        return remote;
+      }
+    } catch { /* fall through */ }
+  }
+  // Always use local IDB until Supabase is confirmed
+  return restoreBlobs(readStore());
+}
+
+/** Call this once to confirm Supabase is working and enable cloud sync */
+export async function confirmSupabase() {
+  if (!hasSupabase()) return false;
+  try {
+    const { error } = await supabase.from(TABLE).select('id').limit(1);
+    if (!error) { _supabaseConfirmed = true; return true; }
+    return false;
+  } catch { return false; }
+}
 export function readStore() {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -215,48 +241,21 @@ export function readStore() {
   } catch { return { ...defaultStore }; }
 }
 
-/** Async full read — uses Supabase if available AND table exists, else IDB */
-export async function readStoreAsync() {
-  // Only try Supabase if explicitly confirmed working
-  // (avoids 404 spam while table is being set up)
-  if (hasSupabase()) {
-    try {
-      // Quick probe — abort after 3s to avoid blocking
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3000);
-      const remote = await readSupabaseStore();
-      clearTimeout(timer);
-      if (remote) {
-        try { localStorage.setItem(LS_KEY, JSON.stringify(remote)); } catch {}
-        return remote;
-      }
-    } catch { /* fall through */ }
-  }
-  // Fallback: resolve IDB blob refs
-  return restoreBlobs(readStore());
-}
-
-/** Write — uses Supabase if available, else IDB+localStorage */
+/** Write — uses Supabase if confirmed working, else IDB+localStorage */
 export async function writeStore(data) {
-  // Always dispatch event immediately with full in-memory data
   window.dispatchEvent(new CustomEvent('saill_store_updated', { detail: data }));
 
-  if (hasSupabase()) {
-    // Write each top-level key to Supabase
+  if (hasSupabase() && _supabaseConfirmed) {
     const writes = Object.entries(data).map(([key, value]) =>
       writeSupabaseKey(key, value)
     );
     await Promise.all(writes).catch(e => console.warn('Supabase write error:', e));
-    // Update local cache too
     try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
   } else {
-    // Local fallback
     try {
       const lsData = await separateBlobs(data);
       localStorage.setItem(LS_KEY, JSON.stringify(lsData));
-    } catch (e) {
-      console.warn('localStorage write failed:', e);
-    }
+    } catch (e) { console.warn('localStorage write failed:', e); }
   }
 }
 
