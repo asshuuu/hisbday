@@ -16,10 +16,10 @@ export const SECTIONS = [
 ];
 
 export const defaultQuestions = [
-  { id: 'q1', question: 'What is your favourite flower?',       answer: '' },
-  { id: 'q2', question: 'Which city holds our best memory?',    answer: '' },
-  { id: 'q3', question: 'What was the first movie we watched?', answer: '' },
-  { id: 'q4', question: 'What do you call me as a nickname?',   answer: '' },
+  { id: 'q1', question: 'Your Favourite Hero?',       answer: 'ramcharan' },
+  { id: 'q2', question: 'Our first Movie?',    answer: 'tereishqmein' },
+  { id: 'q3', question: 'Our First Hackathon?', answer: 'sankalp' },
+  { id: 'q4', question: 'What do you call me as a nickname?',   answer: 'junghu' },
 ];
 
 const defaultSectionTracks = Object.fromEntries(
@@ -36,15 +36,15 @@ export const defaultStore = {
 
   // ── Media paths (edit directly in code or via admin URL field) ─
   // Drop files in /public and set the path here, OR paste a URL in admin panel
-  heroVideo:    '/herobg.mp4',
+  heroVideo:    'https://sqzpswpmkucpetunjpek.supabase.co/storage/v1/object/public/saill-media/herobg.mp4',
   heroFallback: '',
   scratchSrc:   '',
   scratchSrc2:  '',
 
   // Our story timeline image paths — set to e.g. '/story/s1.jpg'
   timelineImages: {
-    s1:'', s2:'', s3:'', s4:'', s5:'',
-    s6:'', s7:'', s8:'', s9:'/together.jpeg', s10:'',
+    s1:'/convo.jpeg', s2:'/smiles.jpeg', s3:'/firstpic.jpeg', s4:'/endcon.jpeg', s5:'/beaut.jpeg',
+    s6:'/adv.jpeg', s7:'/silly.jpeg', s8:'/highlow.jpeg', s9:'/together.jpeg', s10:'/today.jpeg',
   },
 };
 
