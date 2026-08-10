@@ -9,14 +9,8 @@ export default function HeroSection({ onBegin }) {
   const [videoKey,    setVideoKey]    = useState(0);
   const prevSrc = useRef('');
 
-  // Priority: admin URL → env var → local /herovideo.mp4
-  const envVideo = import.meta.env.VITE_HERO_VIDEO_URL || '';
-  const adminVideo = store.heroVideo;
-  const isValidUrl = (v) => v && !v.startsWith('blob:') && !v.startsWith('__idb__:') && v.trim() !== '';
-
-  const videoSrc = isValidUrl(adminVideo) ? adminVideo
-    : isValidUrl(envVideo) ? envVideo
-    : '/herovideo.mp4';
+  // Use heroVideo from store — defaults to /herobg.mp4 (set in useMediaStore.js)
+  const videoSrc = store.heroVideo || '/herobg.mp4';
   const fallbackSrc = store.heroFallback || '';
 
   // Reset video element whenever source changes
