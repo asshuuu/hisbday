@@ -1,9 +1,10 @@
 /**
- * useMediaStore — IDB + localStorage storage
- * No Supabase calls here. Supabase is used only in AdminPanel
- * for file uploads when the bucket is confirmed working.
- * Small files (images) → base64 in IndexedDB
- * Large files (video/audio) → must use URL (paste in admin panel)
+ * useMediaStore — simple localStorage-only config store
+ *
+ * Media files (images, video, audio) are served from /public directly.
+ * This store only holds TEXT config: labels, messages, questions, section track names.
+ *
+ * To add media:  drop files into /public and reference them by path e.g. "/herovideo.mp4"
  */
 import { useState, useEffect } from 'react';
 
@@ -21,96 +22,33 @@ export const defaultQuestions = [
   { id: 'q4', question: 'What do you call me as a nickname?',   answer: '' },
 ];
 
-const defaultTimelineImages = {
-  s1:'',s2:'',s3:'',s4:'',s5:'',
-  s6:'',s7:'',s8:'',s9:'',s10:'',
-};
-
 const defaultSectionTracks = Object.fromEntries(
   SECTIONS.map(s => [s.id, { url: '', name: '' }])
 );
 
 export const defaultStore = {
-  heroVideo:            '',
-  heroFallback:         '',
-  scratchSrc:           '',
-  scratchSrc2:          '',
+  // ── Labels & text (admin-editable) ────────────────────
   scratchLabel:         'Our Special Surprise 💫',
   scratchRevealMessage: 'Every moment with you is a gift I never want to stop unwrapping. You make every single day brighter just by being you. Today and always — I am so grateful you exist. 🌸',
-  surpriseBg:           '',
   birthdayLetter:       '',
   questions:            defaultQuestions,
   sectionTracks:        defaultSectionTracks,
-  timelineImages:       defaultTimelineImages,
+
+  // ── Media paths (edit directly in code or via admin URL field) ─
+  // Drop files in /public and set the path here, OR paste a URL in admin panel
+  heroVideo:    '/herobg.mp4',
+  heroFallback: '',
+  scratchSrc:   '',
+  scratchSrc2:  '',
+
+  // Our story timeline image paths — set to e.g. '/story/s1.jpg'
+  timelineImages: {
+    s1:'', s2:'', s3:'', s4:'', s5:'',
+    s6:'', s7:'', s8:'', s9:'', s10:'',
+  },
 };
 
-/* ─── IndexedDB helpers ──────────────────────────────── */
-const IDB_NAME    = 'saill_blobs';
-const IDB_STORE   = 'blobs';
-const LS_KEY      = 'saill_media_store';
-const BLOB_PREFIX = '__idb__:';
-let _db = null;
-
-function openDB() {
-  if (_db) return Promise.resolve(_db);
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
-    req.onsuccess  = e => { _db = e.target.result; res(_db); };
-    req.onerror    = e => rej(e.target.error);
-  });
-}
-async function idbPut(key, val) {
-  const db = await openDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put(val, key).onsuccess = res;
-    tx.onerror = e => rej(e.target.error);
-  });
-}
-async function idbGet(key) {
-  const db = await openDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(IDB_STORE, 'readonly');
-    const req = tx.objectStore(IDB_STORE).get(key);
-    req.onsuccess = e => res(e.target.result ?? null);
-    req.onerror   = e => rej(e.target.error);
-  });
-}
-
-function isBase64(v) { return typeof v === 'string' && v.startsWith('data:'); }
-function idbRef(k)   { return `${BLOB_PREFIX}${k}`; }
-function isRef(v)    { return typeof v === 'string' && v.startsWith(BLOB_PREFIX); }
-function refKey(v)   { return v.slice(BLOB_PREFIX.length); }
-
-/** Walk an object, store base64 blobs in IDB, replace with refs */
-async function separateBlobs(obj, path = '') {
-  if (typeof obj !== 'object' || !obj) return obj;
-  if (Array.isArray(obj)) return Promise.all(obj.map((v,i) => separateBlobs(v, `${path}[${i}]`)));
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
-    const p = path ? `${path}.${k}` : k;
-    if (isBase64(v)) { await idbPut(p, v); out[k] = idbRef(p); }
-    else if (typeof v === 'object' && v) out[k] = await separateBlobs(v, p);
-    else out[k] = v;
-  }
-  return out;
-}
-
-/** Walk an object, replace IDB refs with real blobs */
-export async function restoreBlobs(obj) {
-  if (typeof obj !== 'object' || !obj) return obj;
-  if (Array.isArray(obj)) return Promise.all(obj.map(v => restoreBlobs(v)));
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (isRef(v))                              out[k] = (await idbGet(refKey(v))) ?? '';
-    else if (typeof v === 'object' && v)       out[k] = await restoreBlobs(v);
-    else                                       out[k] = v;
-  }
-  return out;
-}
-
-/* ─── Public API ─────────────────────────────────────── */
+const LS_KEY = 'saill_config';
 
 export function readStore() {
   try {
@@ -120,51 +58,31 @@ export function readStore() {
     return {
       ...defaultStore,
       ...p,
-      questions:     defaultQuestions.map((dq,i) => p.questions?.[i] ? { ...dq, ...p.questions[i] } : dq),
-      sectionTracks: { ...defaultSectionTracks,  ...(p.sectionTracks  || {}) },
-      timelineImages:{ ...defaultTimelineImages, ...(p.timelineImages || {}) },
+      questions:      defaultQuestions.map((dq, i) => p.questions?.[i] ? { ...dq, ...p.questions[i] } : dq),
+      sectionTracks:  { ...defaultSectionTracks, ...(p.sectionTracks || {}) },
+      timelineImages: { ...defaultStore.timelineImages, ...(p.timelineImages || {}) },
     };
   } catch { return { ...defaultStore }; }
 }
 
-/** Walk an object, strip any blob: URLs (they're dead after page reload) */
-function stripBlobUrls(obj) {
-  if (typeof obj !== 'object' || !obj) return obj;
-  if (Array.isArray(obj)) return obj.map(v => stripBlobUrls(v));
-  const out = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (typeof v === 'string' && v.startsWith('blob:')) out[k] = '';
-    else if (typeof v === 'object' && v) out[k] = stripBlobUrls(v);
-    else out[k] = v;
-  }
-  return out;
-}
-
-export async function readStoreAsync() {
-  const raw = readStore();
-  const cleaned = stripBlobUrls(raw);
-  return restoreBlobs(cleaned);
-}
-
-export async function writeStore(data) {
+export function writeStore(data) {
+  // Never store large blobs — only text/paths/URLs
+  const safe = JSON.parse(JSON.stringify(data, (k, v) => {
+    if (typeof v === 'string' && v.startsWith('data:')) return ''; // strip base64
+    if (typeof v === 'string' && v.startsWith('blob:'))  return ''; // strip blob
+    return v;
+  }));
+  try { localStorage.setItem(LS_KEY, JSON.stringify(safe)); } catch (e) { console.warn(e); }
   window.dispatchEvent(new CustomEvent('saill_store_updated', { detail: data }));
-  try {
-    const lsData = await separateBlobs(data);
-    localStorage.setItem(LS_KEY, JSON.stringify(lsData));
-  } catch (e) { console.warn('writeStore failed:', e); }
 }
 
 export function deriveCode(questions) {
-  return questions.map(q => (q.answer||'').trim().charAt(0).toLowerCase()).join('');
+  return questions.map(q => (q.answer || '').trim().charAt(0).toLowerCase()).join('');
 }
 
+// Simple sync hook — no async IDB needed
 export function useMediaStore() {
   const [store, setStore] = useState(readStore);
-  useEffect(() => {
-    let c = false;
-    readStoreAsync().then(full => { if (!c) setStore(full); });
-    return () => { c = true; };
-  }, []);
   useEffect(() => {
     const h = e => setStore({ ...e.detail });
     window.addEventListener('saill_store_updated', h);
@@ -176,3 +94,7 @@ export function useMediaStore() {
   };
   return [store, update];
 }
+
+// readStoreAsync is now just sync (no IDB to wait for)
+export async function readStoreAsync() { return readStore(); }
+export async function restoreBlobs(obj) { return obj; }
