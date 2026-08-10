@@ -962,69 +962,6 @@ export default function AdminPanel({ onClose }) {
 
               <ThemePicker />
 
-              {/* ── 6. GALLERY PHOTOS ───────────────────── */}
-              <Divider label="🖼️ Gallery Photos" />
-
-              {/* Existing photos */}
-              {store.galleryPhotos.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  {store.galleryPhotos.map(p => (
-                    <GalleryPhotoRow
-                      key={p.id}
-                      photo={p}
-                      onRemove={() => removeGalleryPhoto(p.id)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Add new */}
-              <div style={{ background: 'rgba(255,255,255,0.025)', borderRadius: '10px', padding: '16px', border: '1px solid rgba(255,255,255,0.07)', marginBottom: '8px' }}>
-                <Label>Add New Photo</Label>
-
-                <div style={{ marginBottom: '10px' }}>
-                  <Input
-                    placeholder="Label (e.g. Our first adventure)"
-                    value={newPhotoLabel}
-                    onChange={e => setNewPhotoLabel(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <Input
-                    placeholder="Paste image URL…"
-                    value={newPhotoSrc}
-                    onChange={e => setNewPhotoSrc(e.target.value)}
-                  />
-                  <button
-                    onClick={() => { if (newPhotoSrc.trim()) addGalleryPhoto(newPhotoSrc.trim()); }}
-                    style={{ background: '#E50914', border: 'none', borderRadius: '8px', padding: '0 14px', color: '#fff', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
-                  >
-                    Add
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '10px 0', color: 'rgba(255,255,255,0.25)', fontSize: '0.72rem', fontFamily: 'Inter, sans-serif' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-                  or upload file
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-                </div>
-
-                <input
-                  ref={newPhotoFileRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={e => { const f = e.target.files[0]; if (f) addGalleryPhoto(f); e.target.value = ''; }}
-                />
-                <button
-                  onClick={() => newPhotoFileRef.current?.click()}
-                  style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.18)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', fontFamily: 'Inter, sans-serif', cursor: 'pointer' }}
-                >
-                  📁 Choose file…
-                </button>
-              </div>
-
               {/* ── Danger zone ─────────────────────────── */}
               <Divider label="⚠ Danger Zone" />
 

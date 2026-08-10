@@ -6,7 +6,6 @@ import LoadingScreen    from './components/LoadingScreen';
 import Navbar           from './components/Navbar';
 import HeroSection      from './components/HeroSection';
 import OurStorySection  from './components/OurStorySection';
-import GallerySection   from './components/GallerySection';
 import ScratchSection   from './components/ScratchSection';
 import BirthdaySection  from './components/BirthdaySection';
 import MusicController  from './components/MusicController';
@@ -82,7 +81,6 @@ export default function App() {
             <main>
               <HeroSection      onBegin={handleBeginJourney} />
               <OurStorySection  />
-              <GallerySection   />
               <ScratchSection   />
               <BirthdaySection  onReplay={handleReplay} />
             </main>

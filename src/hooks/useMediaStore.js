@@ -26,7 +26,6 @@ import { supabase, BUCKET, TABLE, hasSupabase } from '../lib/supabase';
 export const SECTIONS = [
   { id: 'home',      label: 'Hero',      icon: '🎬' },
   { id: 'our-story', label: 'Our Story', icon: '❤️' },
-  { id: 'gallery',   label: 'Gallery',   icon: '🖼️' },
   { id: 'surprises', label: 'Surprises', icon: '🎁' },
   { id: 'birthday',  label: 'Birthday',  icon: '🎂' },
 ];

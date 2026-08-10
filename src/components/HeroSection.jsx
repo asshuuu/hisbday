@@ -36,18 +36,8 @@ export default function HeroSection({ onBegin }) {
     []
   );
 
-  // A value is a playable video src if it exists and is not an image
-  const isVideoSrc = (src) => {
-    if (!src) return false;
-    if (src.startsWith('data:video')) return true;
-    if (src.startsWith('data:image')) return false;
-    // URL — check extension
-    const ext = src.split('?')[0].split('#')[0].split('.').pop().toLowerCase();
-    return ['mp4','webm','ogg','mov'].includes(ext) ||
-      (!['jpg','jpeg','png','gif','webp','avif','svg'].includes(ext));
-  };
-
-  const hasVideo = isVideoSrc(store.heroVideo) && !videoError;
+  // Trust that whatever is stored in heroVideo is intended as a video
+  const hasVideo = !!store.heroVideo && !videoError;
   const hasFallback = !!store.heroFallback;
 
   return (
